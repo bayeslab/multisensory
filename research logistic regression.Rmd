@@ -1,0 +1,273 @@
+---
+title: "logistic regression research"
+author: "Tao Hong"
+date: "1/4/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+library(stringr)
+colnames(task)=c('ID','Condition','Response')
+task1 = group_by(task,ID)
+task1 = arrange(task1,Condition)
+task %>% group_by(ID) %>% arrange (Condition)
+task = arrange(task,ID)
+filter(task, Condition %in% str_subset(task$Condition, "^Ball"))
+for (i in 1:nrow(task)){
+  task[i,2] = str_replace(task[i,2],' ','')
+}
+task = mutate(task, VisCondition = str_sub(Condition,1,5))
+task = mutate(task, AudCondition = str_sub(Condition,6,-1))
+
+finalCluster
+name4vec
+
+task = task[c('ID','VisCondition','AudCondition','Condition','Response')]
+task[['ID']][10*240]
+length(unique(task$ID))
+unique(task$AudCondition)
+unique(task$VisCondition)
+
+task = task[!task$AudCondition=="iceBinary Under Ticks1",]
+
+filter(task,AudCondition == "iceBinary Under Ticks1")
+task[task$AudCondition == "J", ]$VisCondition = rep('Audio',8)
+Workbook2 = Workbook2[unique(task$AudCondition)[1:15]]
+rownames(Workbook2) = c('avg','MarchScore','Ambiguity','1to15')
+MarchScore = Workbook2[2,]
+MarchScore = t(MarchScore)
+MarchScore
+colnames(MarchScore) = 'AudCondition'
+left_join(task,MarchScore)
+colnames(MarchScore) = 'MarchScore'
+MarchScore[['AudCondition']] = rownames(MarchScore)
+rownames(MarchScore) = 1:nrow(MarchScore)
+task = left_join(task,MarchScore)
+Ambiguity = Workbook2[3,]
+Ambiguity = t(Ambiguity)
+Ambiguity = as.data.frame(Ambiguity)
+colnames(Ambiguity)= 'Ambiguity'
+Ambiguity[['AudCondition']] = rownames(Ambiguity)
+rownames(Ambiguity) = 1:nrow(Ambiguity)
+task = left_join(task,Ambiguity)
+task = task[c('ID','VisCondition','AudCondition','MarchScore','Ambiguity','Condition','Response')]
+
+
+
+#449(180)，571(213),597(237)，662（242），696（356），755（46）
+
+finalCluster = as.numeric(finalCluster)
+names(finalCluster) = as.character(name4vec)
+finalCluster = finalCluster[as.character(unique(task$ID))]
+finalCluster[4] = 1
+finalCluster[8] = 2
+names(finalCluster)[4]='428'
+names(finalCluster)[8] = '476'
+MusicExp = finalCluster
+MusicExp = as.data.frame(MusicExp)
+MusicExp['ID'] = rownames(MusicExp)
+rownames(MusicExp) = 1:nrow(MusicExp)
+MusicExp[['ID']] = as.numeric(MusicExp[['ID']])
+task = left_join(task,MusicExp,by='ID')
+
+
+# unique(task$Condition)
+# 
+# table(filter(task,ID %in% c(449,571,213,597,662,696,755))$ID,filter(task,ID %in% c(449,571,213,597,662,696,755))$Condition)
+
+task = task[c('ID','MusicExp.y','VisCondition','AudCondition','MarchScore','Ambiguity','Condition','Response','c.MarchScore','c.Ambiguity')]
+colnames(task)[2] = 'MusicExp'
+
+task = mutate(task,c.MarchScore = MarchScore-mean(MarchScore))
+task = mutate(task,c.Ambiguity = Ambiguity-mean(Ambiguity))
+
+task = mutate(task,Response01 = ifelse(Response==2,0,1))
+task[['MusicExp']] = as.factor(task[['MusicExp']])
+task[['VisCondition']] = as.factor(task[['VisCondition']])
+
+
+
+
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+
+
+permutations = as.data.frame(permutations)
+
+
+
+m428 = matrix(NA,nrow = 10000,ncol=3)
+for (i in 1:nrow(m428)){
+  first = piDraw[i,which(permutations[i,]==1)]*dnorm(1.62,mean=muDraw[which(permutations[i,]==1),1,i],sd=sqrt(solve(oDraw[1:3,1:3,which(permutations[1,]==1),i])[1,1]))*qDraw[which(permutations[i,]==1),2,i]*(1-pDraw[i,which(permutations[i,]==1)])
+  second = piDraw[i,which(permutations[i,]==2)]*dnorm(1.62,mean=muDraw[which(permutations[i,]==2),1,i],sd=sqrt(solve(oDraw[1:3,1:3,which(permutations[1,]==2),i])[1,1]))*qDraw[which(permutations[i,]==2),2,i]*(1-pDraw[i,which(permutations[i,]==2)])
+  third = piDraw[i,which(permutations[i,]==3)]*dnorm(1.62,mean=muDraw[which(permutations[i,]==3),1,i],sd=sqrt(solve(oDraw[1:3,1:3,which(permutations[1,]==3),i])[1,1]))*qDraw[which(permutations[i,]==3),2,i]*(1-pDraw[i,which(permutations[i,]==3)])
+ # fourth = piDraw[i,which(permutations[i,]==4)]*dnorm(1.62,mean=muDraw[which(permutations[i,]==4),1,i],sd=sqrt(solve(oDraw[1:3,1:3,which(permutations[1,]==4),i])[1,1]))*qDraw[which(permutations[i,]==4),2,i]*(1-pDraw[i,which(permutations[i,]==4)])
+  m428[i,]=c(first,second,third)/(first+second+third)
+}
+
+m476 = matrix(NA,nrow = 10000,ncol=3)
+
+for (i in 1:nrow(m476)){
+  first = piDraw[i,which(permutations[i,]==1)]*dmvn(c(0.33,-0.09),muDraw[which(permutations[i,]==1),1:2,i],oDraw[1:2,1:2,which(permutations[1,]==1),i])*qDraw[which(permutations[i,]==1),1,i]*pDraw[i,which(permutations[i,]==1)]
+  second = piDraw[i,which(permutations[i,]==2)]*dmvn(c(0.33,-0.09),muDraw[which(permutations[i,]==2),1:2,i],oDraw[1:2,1:2,which(permutations[1,]==2),i])*qDraw[which(permutations[i,]==2),1,i]*pDraw[i,which(permutations[i,]==2)]
+  third = piDraw[i,which(permutations[i,]==3)]*dmvn(c(0.33,-0.09),muDraw[which(permutations[i,]==3),1:2,i],oDraw[1:2,1:2,which(permutations[1,]==3),i])*qDraw[which(permutations[i,]==3),2,i]*pDraw[i,which(permutations[i,]==3)]
+ # fourth = piDraw[i,which(permutations[i,]==4)]*dmvn(c(0.33,-0.09),muDraw[which(permutations[i,]==4),1:2,i],oDraw[1:2,1:2,which(permutations[1,]==4),i])*qDraw[which(permutations[i,]==4),2,i]*pDraw[i,which(permutations[i,]==4)]
+  m476[i,]=c(first,second,third)/(first+second+third)
+}
+
+
+M1 = glmer(Response01 ~ +VisCondition+c.MarchScore
+           +VisCondition:c.MarchScore+MusicExp:c.MarchScore+VisCondition:c.Ambiguity+c.Ambiguity:MusicExp
+           +VisCondition:c.MarchScore:MusicExp+VisCondition:MusicExp:c.Ambiguity
+           +(1+VisCondition|ID)+(1+c.MarchScore|ID)+(1+c.Ambiguity|ID)
+           +(1+VisCondition:c.Ambiguity|ID)+(1+VisCondition:c.MarchScore|ID)
+           ,family=binomial(link="logit"),data=task2,control=glmerControl(optCtrl=list(maxfun=1e6)))
+
+
+
+
+library(lme4)
+library(tidyverse)
+library(optimx)
+M1 = glmer(Response01 ~ VisCondition+c.MarchScore+MusicExp
+           +VisCondition:c.MarchScore+MusicExp:c.MarchScore+c.MarchScore:MusicExp:VisCondition
+           +(c.MarchScore+VisCondition+c.MarchScore:VisCondition+c.MarchScore:MusicExp|ID)
+           ,family=binomial(link="logit"),data=task2,control=glmerControl(optimizer  = 'bobyqa',optCtrl=list(maxfun=1e6)))
+
+
+
+M2 = glmer(Response01 ~ VisCondition+c.MarchScore+MusicExp
+           +VisCondition:c.MarchScore+MusicExp:c.MarchScore
+           +VisCondition:c.MarchScore:MusicExp
+           +(c.MarchScore+VisCondition+VisCondition:c.MarchScore|ID)
+           ,family=binomial(link="logit"),data=task2,control=glmerControl(optimizer  = 'bobyqa',optCtrl=list(maxfun=1e6)))
+
+
+
+
+M3 = glmer(Response01 ~ VisCondition+c.MarchScore+MusicExp
+           +VisCondition:c.MarchScore+MusicExp:c.MarchScore
+           +VisCondition:c.MarchScore:MusicExp
+           +(c.MarchScore+VisCondition+VisCondition:c.MarchScore|ID)
+           ,family=binomial(link="logit"),data=task,control=glmerControl(optimizer  = 'bobyqa',optCtrl=list(maxfun=1e6)))
+
+aa = allFit(M3)
+
+task
+
+
+
+
+
+
+M3 = glmer(Response01 ~ VisCondition+c.MarchScore+MusicExp+c.Ambiguity
+           +VisCondition:c.MarchScore+MusicExp:c.MarchScore+VisCondition:c.Ambiguity+c.Ambiguity:MusicExp+
+           +VisCondition:c.MarchScore:MusicExp+VisCondition:MusicExp:c.Ambiguity
+           +(c.MarchScore+VisCondition+c.Ambiguity+VisCondition:c.MarchScore+VisCondition:c.Ambiguity|ID)
+           ,family=binomial(link="logit"),data=task,control=glmerControl(optimizer  = 'bobyqa',optCtrl=list(maxfun=1e6)))
+ss <- getME(M3,c("theta","fixef"))
+M4 = update(M3,start=ss,control=glmerControl(optimizer = 'bobyqa',optCtrl=list(maxfun=2e6)))
+
+
+
+task[['ID']]=as.factor(task[['ID']])
+
+
+task
+
+
+
+
+
+task2 = task2[task2$ID!=755,]
+
+
+unique(task$MusicExp)
+
+aa = allFit(M1)
+
+  
+install.packages("R2admb")
+install.packages("glmmADMB", 
+    repos=c("http://glmmadmb.r-forge.r-project.org/repos",
+            getOption("repos")),
+    type="source")  
+
+
+library(glmmADMB)
+
+
+ss <- getME(M4,c("theta","fixef"))
+M5 = update(M4,start=ss,control=glmerControl(optimizer = 'bobyqa',optCtrl=list(maxfun=2e6)))
+```
+
+```{r}
+task
+contrasts(task$VisCondition)
+new.contrast.matrix <-
+  cbind(
+    Ball2 = c(-1, 1, 0, 0),
+    Ball3 = c(-1, 0, 1, 0),
+    Ball5 = c(-1, 0, 0, 1)
+  )
+
+
+contrasts(task$VisCondition) <- new.contrast.matrix
+contrasts(task2$VisCondition)
+task2[['ID']] = task2[['ID']]
+
+length(unique(filter(task2,MusicExp==3)$ID))
+filter(task2,ID == 400)
+task2[['ID']]=as.numeric(task2[['ID']])
+task2[['ID']]=task[['ID']]
+task2[['ID']]=as.numeric(as.character(task2[['ID']]))
+contrasts(task2$MusicExp)
+```
+
+
+```{r}
+#glmmadmb
+
+install.packages("R2admb")
+install.packages("glmmADMB", 
+    repos=c("http://glmmadmb.r-forge.r-project.org/repos",
+            getOption("repos")),
+    type="source")  
+
+library(glmmADMB)
+GM1= glmmadmb(Response01 ~ MusicExp+VisCondition+c.MarchScore+c.Ambiguity
+         +VisCondition:c.MarchScore+MusicExp:MarchScore+VisCondition:c.Ambiguity+c.Ambiguity:MusicExp
+         +VisCondition:c.MarchScore:MusicExp+VisCondition:MusicExp:c.Ambiguity
+         +(1+VisCondition|ID)+(1+c.MarchScore|ID)+(1+c.Ambiguity|ID),
+         data=task2,
+         zeroInflation=FALSE,
+         family="binomial",link='logit',debug=TRUE)
+
+
+task2
+
+task
+task2[2661,8]=2
+task2[2661,11] = 0
+task2[['ID']] = as.factor(task2[['ID']])
+task2[2661,8]
+task2=task
+mean(task2[['Ambiguity']])+task2[['c.Ambiguity']]```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

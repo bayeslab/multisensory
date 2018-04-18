@@ -1,0 +1,149 @@
+This_Semester,Height,Gender,Excited_Class,Play_Instrument,Instrument_Type,Fave_Food,Year,Pop_US,Pop_India,State_Country,Car,Haircut,Change,Siblings,Sleep,Prof_Age,Coop,Exercise,Politics,Major,Drink
+Y,72,M,2,Y,Guitar,Last,3,350,1000,Massachussetts,Y,20,25,1,6.5,32,N,3,1,Neuro,
+Y,69,F,7,Y,Flute,Last,1,300,1000,Maryland,N,20,25,1,8,37,N,0,5,"Politics, Peace",Honest Tea
+Y,65,F,8,N,,First,1,300,1000,Florida,N,37,253,2,7,36,N,4,2.5,Anthro,Lemonade
+Y,69,M,7,N,,Last,2,100,200,Illinois,N,15,0,3,8,32,N,4,1,Sociology,Cran Apple Juice
+Y,63,F,4,N,,Last,2,300,800,New York,N,25,162,2,9,38,Y,0,3,History,Iced Tea
+Y,68,F,5,N,,Last,1,1000,1500,New York,N,30,175,1,7.5,35,N,4,3,"Film, Sociology",Bubble Tea
+Y,64,F,7,N,,Last,2,350,1000,California,N,72,265,1,5,34,N,0,5,Math,Milk
+Y,73,M,7,Y,Piano,First,2,316,1200,Michigan,N,17,23,3,6,30,N,3,2,"Neuro, German",Wheat Beer
+Y,62,F,9,Y,Piano,Last,4,380,800,California,N,0,0,2,9,35,Y,4,4,Math,Angry Orchard Ginger
+Y,68,?,8.7,Y,Guitar,Last,1,300,600,Pennsylvania,N,115,0,1,7.5,38,Y,6,3.5,Undecided,Fresh Orange Juice
+Y,68,F,8,Y,Piano,First,3,3250,3000,Connecticut,N,25,350,2,7,34,N,6,2,Biology,Pina Colada
+Y,70,M,7,Y,Piano,Last,2,300,1000,California,N,23,0,1,8,32,N,1,3,Jazz Piano,POG
+Y,67,M,5,Y,Piano,Last,2,400,1000,China,N,5,254,0,7,37,N,3,,Neuro,Water
+Y,63,F,5,N,,Last,2,300,1000,Colorado,N,40,80,2,7,35,Y,0.5,4,"GSFS, History",Coffee
+Y,71,F,2,Y,Piano,Last,1,600,800,Maryland,N,60,0,1,6,42,N,3,3,Econ,Grapefruit Juice
+Y,67,F,8,Y,Piano,Last,1,330,1000,Maryland,N,100,0,1,8,35,N,4,3,Biology,White Wine
+Y,72,M,6,N,,Last,3,300,1600,New York,N,30,80,0,9,32,N,2,2,Comp Sci,Gin and Tonic
+Y,76,M,8,N,,First,4,150,100,Ohio,Y,15,118,2,8,27,N,5,1,ENVS,Budweiser
+Y,68,F,6,Y,Violin,Last,2,500,800,Virginia,Y,70,15,1,7,35,N,7,3,"Econ, Politics",Gatorade
+Y,69,M,7,N,,Last,1,330,1000,North Carolina,N,20,0,1,7,32,N,6,-3,Biology,Sweet Tea
+Y,68,M,5,N,,First,2,600,1000,California,N,20,75,2,4,35,N,4.5,5,"Religion, Econ",Coffee
+Y,70,F,6,Y,Viola,First,3,1000,1300,Ohio,N,40,5,1,8,40,Y,7,3,Neuro,Tea
+Y,65,F,6,Y,Guitar,First,2,1000,800,Connecticut,N,120,75,1,7,36,N,7,2,Biology,Hot Chocolate
+Y,67,F,5,N,,First,4,500,900,New York,N,110,60,1,7,43,N,4,2,English,Tea
+Y,68,M,6,Y,Piano,Last,1,100,1000,Canada,N,0,0,1,8,34,N,3,6,Biology,Tea
+Y,67,F,7,Y,Piano,Depends,1,300,1000,California,N,30,0,1,6,30,Y,0,3,Physics,Chocolate Milk with Salt
+Y,63,F,7,Y,Guitar,Last,1,7,5,California,N,50,5,1,8,32,N,6,0,"ENVS, Econ",Diet Coke
+Y,73,M,6,Y,Clarinet,Last,1,310,1000,Massachussetts,N,20,0,2,6,35,N,4,3,Undecided,Cranberry Juice
+Y,71.4,M,9,Y,Piano,First,1,360,1200,DC,N,30,0,1,9,32,N,5,-5,Undecided,Water
+Y,64,F,11,N,,Last,2,50,1000,Somaliland,N,30,378,4,9,45,N,3,5,"Politics, Econ",Coke
+Y,67,M,8,Y,Voice,Last,4,320,1300,Arizona,N,17,250,1,6,33,N,4,4,"Politics, Classical Civ",Wine
+Y,64,F,6,N,,,4,400,800,New Jersey,N,100,99,0,9,39,N,3,4,EAS Chinese,Tea
+Y,61,F,5,Y,Guzheng,Throughout,2,300,1000,China,N,10,130,0,7.5,35,Y,4,1,"Econ, Politics",Milk
+Y,61,F,8,N,,Last,1,300,1000,California,N,70,0,2,8,36,N,6,4,Musical Studies,English Breakfast Tea Latte
+Y,67,F,7,Y,Ukelele,Last,2,200,100,New York,N,115,0,1,7,33,N,5,4,"Dance, Neuro",Chai Tea
+Y,66,M,6,N,,First,4,200,900,Massachussetts,N,31,40,2,7,36,N,4,3,Politics,Beer
+N,66,F,6,N,,Last,4,2000,5000,Ohio,Y,42,60,,5,,N,1,,,
+N,70,M,8,Y,Trumpet,First,4,335,1200,Ohio,N,20,25,,8,,N,2.5,,,
+N,68,F,7,Y,Violin,Last,3,60,1000,Ohio,Y,10,230,,9,,Y,6,,,
+N,72,M,5,Y,Piano,First,2,300,1500,,Y,18,0,,9,,N,7,,,
+N,74,M,5,Y,Saxophone,Last,4,300,500,Michigan,N,0,0,,8,,N,6,,,
+N,72,M,7,N,,First,4,40,1000,Ohio,N,20,0,,7.5,,N,2,,,
+N,69,M,8,Y,Piano,Last,1,350,12000,Ohio,Y,0,312,,8,,N,6,,,
+N,65,F,8,Y,Bass,Last,3,20,35,Georgia,N,70,15,,8,,Y,7,,,
+N,63,F,7,Y,Piano,Last,2,250,500,Ohio,N,20,200,,8,,N,3,,,
+N,74,M,7.8,Y,Trumpet/FrenchHorn,First,2,,,Maryland,N,20,220,,6,,N,6,,,
+N,60,F,7,Y,Guitar,Last,1,350,1000,Ohio,N,70,50,,9.5,,Y,5,,,
+N,64,F,6,Y,Mandolin,Last,4,2,6,Massachussetts,Y,10,100,,9,,Y,4.5,,,
+N,72,M,5,Y,Guitar,First,3,350,1200,Spain,N,17,0,,7,,N,4,,,
+N,67,F,7,N,,Last,4,,,UAE,Y,75,78,,7,,N,3,,,
+N,65,F,6,Y,Ukelele,Last,3,301,1000,Ohio,Y,0,0,,7,,N,3,,,
+N,75,M,6,Y,Saxophone,Last,3,400,1200,Massachussetts,N,21,0,,8,,N,2,,,
+N,71,M,5,N,,Throughout,3,600,1300,NewYork,Y,20,0,,7,,N,6,,,
+N,71,M,10,Y,Saxophone,Last,4,,,Illinois,Y,0,0,,8.5,,N,,,,
+N,71,M,7.5,Y,Clarinet,First,4,315,1200,Texas,Y,24,0,,7,,N,4,,,
+N,69,F,5,Y,Bassoon,Last,2,10,20,Connecticut,N,0,5,,8,,N,7,,,
+N,72,F,5,N,,Last,4,1000,10,California,Y,75,0,,7,,N,6,,,
+N,68,M,8,N,,Last,2,370,600,Massachussetts,N,18,65,,8.5,,N,4,,,
+N,66,F,5,Y,Flute,Last,2,2,3,Canada,N,0,15,,8,,N,7,,,
+N,62,F,5,N,,Throughout,3,300,1500,California,N,80,200,,8,,Y,7,,,
+N,68,M,3,Y,Piano,Last,3,330,1200,NewJersey,Y,0,5,,8,,N,7,,,
+N,66,F,8,Y,Guitar,First,2,300,300,Kenya,N,3,0,,7,,N,6,,,
+N,71,?,3,Y,Flute,Last,4,20,1300,Pennsylvania,N,0,923,,8,,N,12,,,
+N,68,M,8,N,,First,2,300,250,Nigeria,N,15,0,,7,,N,1,,,
+N,68,M,7,Y,Piano,First,4,300,1000,Pennsylvania,Y,42,0,,5.5,,N,5,,,
+N,72,M,6,Y,JazzBass,Last,3,375,1200,Pennsylvania,N,0,0,,8,,N,5,,,
+N,76,M,7,Y,Saxophone,First,3,340,600,Illinois,N,35,0,,8,,N,3,,,
+N,68,M,8,N,,First,4,600,700,California,N,17,30,,8,,N,7,,,
+N,76,M,7,Y,Drums,First,3,350,1500,,N,0,900,,7.5,,N,6,,,
+N,71,M,9,N,,Last,3,304,1008,Ohio,N,0,0,,7,,N,5,,,
+N,65,M,6,Y,Ukelele,Last,3,700,1500,Kentucky,N,0,84,,7,,Y,4,,,
+N,70,M,6,Y,Trombone,Last,4,320,900,Colorado,N,30,0,,7,,N,3,,,
+N,72,M,8,Y,FenderRhodes,Last,4,320,1000,California,N,13,14,,6,,N,4,,,
+N,72,M,10,Y,Bass,First,4,500,100,California,N,0,75,,8,,N,0,,,
+N,67.5,M,6,N,,First,2,400,1200,Florida,Y,25,0,,8.5,,N,7,,,
+N,69,M,7,N,,Last,2,200,275,Ohio,Y,0,0,,8,,N,6,,,
+N,68,M,7,Y,Piano,Last,2,3.18,1300,Taiwan,N,0,284,,7.5,,N,7,,,
+N,71,M,9,N,,Last,1,200,2000,Washington,N,40,0,,6.5,,N,7,,,
+N,70,M,5,N,,First,3,300,1400,India,N,10,200,,8,,N,5,,,
+N,64,F,6,N,,Last,4,300,1000,California,N,0,100,,7.5,,Y,6,,,
+N,70,M,8,N,,Depends,4,330,1.5,Ohio,N,0,160,,7,,N,4,,,
+N,61.5,F,4,N,,First,3,700,2500,Alaska,Y,20,0,,10,,N,5,,,
+N,62,F,6,Y,Piano,Last,3,312,2000,Ohio,Y,26,0,,7,,N,7,,,
+N,57,F,6,Y,Piano,First,2,500,1000,NewJersey,N,0,0,,6,,Y,6,,,
+N,62,F,6,Y,Voice,Last,3,50,70,California,N,33,87,,8,,N,0,,,
+N,72,M,4,Y,Saxophone,First,3,1000,2000,Connecticut,N,17,0,,9,,N,6,,,
+N,66,F,5,N,,Last,3,30,80,Nicaragua,N,0,500,,7.5,,Y,1,,,
+N,69,M,4,Y,BassGuitar,Last,4,300,1100,Hawaii,N,25,0,,7.5,,Y,3,,,
+N,76,M,8,Y,Percussion,First,2,100,,California,N,120,0,,8,,N,3,,,
+N,73,M,8,N,,First,3,310,1000,Pennsylvania,N,15,0,,8.5,,N,8,,,
+N,63,F,8,Y,Piano,First,2,7,6,California,N,16,272,,7.5,,N,2,,,
+N,70,M,7,Y,Piano,Last,2,250,1300,Taiwan,N,2,59,,7,,N,6,,,
+N,70,M,6,N,,Last,2,300,2000,Massachussetts,N,0,0,,8.5,,Y,5,,,
+N,67,F,7,Y,Piano,Last,1,400,500,Minnesota,N,30,75,,6,,N,4,,,
+N,66,M,5,Y,Harmonica,Last,3,320,1150,India,Y,20,0,,9,,N,5,,,
+N,67,F,1,N,,Last,4,300,1000,Ohio,Y,10,25,,6.5,,Y,6,,,
+N,70,M,4,Y,Guitar,First,4,350,1200,Pennsylvania,Y,12,36,,8.5,,N,0,,,
+N,71,M,7,Y,Guitar,Throughout,3,305,1100,Pennsylvania,N,45,0,,7.5,,Y,6,,,
+N,67,F,3,Y,Piano,Last,3,500,1000,Ohio,N,22,0,,7.5,,N,6,,,
+N,59,Genderqueer,7,Y,Clarinet,Last,1,1000,75,Pennsylvania,N,15,0,,4,,N,2,,,
+N,72,M,7,Y,Saxophone,Throughout,2,300,1000,NewYork,N,20,0,,8,,N,6,,,
+N,73,M,7,Y,Voice,Last,2,350,1500,Maryland,N,30,0,,7,,N,4,,,
+N,65,F,7,Y,Piano,Last,3,300,1000,Minnesota,N,16,200,,7,,Y,2,,,
+N,74,M,4,Y,Guitar,Last,4,309,1300,Washington,N,28,0,,10,,N,4,,,
+N,64,F,7,Y,Drums,Last,5,250,500,Ohio,Y,55,0,,7.5,,N,12,,,
+N,72,M,7,Y,Guitar,Last,2,2000,3000,,N,10,0,,6,,N,2,,,
+N,72,M,8,Y,Flute,Last,2,500,1000,,N,35,0,,7,,N,5,,,
+N,65,F,6,N,,Last,2,8,1000,,N,0,7,,11,,Y,5,,,
+N,68,F,,Y,Piano,,2,360,1000,,Y,16,85,,6,,Y,,,,
+N,68,M,,Y,Cello,,2,320,1500,,Y,35,110,,8,,Y,,,,
+N,70,M,,Y,Guitar,,4,310,1000,,N,45,0,,5,,Y,,,,
+N,64,F,,Y,Piano,,3,50,100,,N,40,180,,10,,Y,,,,
+N,64,F,,Y,Guitar,,3,6000,9000,,N,24,17,,9.5,,Y,,,,
+N,68,Genderqueer,,Y,Tuba,,2,336,1256,,N,0,46,,7,,Y,,,,
+N,67,F,,N,,,1,700,1000,,N,30,0,,8,,Y,,,,
+N,70,M,,Y,Bass,,4,300,900,,Y,19,0,,8,,N,,,,
+N,73,M,,Y,Violin,,2,650,900,,Y,17,0,,7,,N,,,,
+N,74,M,,Y,Guitar,,4,300,700,,Y,20,25,,8,,N,,,,
+N,72,M,,Y,Guitar,,4,350,1100,,Y,25,0,,6,,N,,,,
+N,63,F,,Y,Piano,,4,325,1125,,Y,40,287,,7,,N,,,,
+N,72,M,,N,,,2,300,1000,,Y,15,0,,8,,N,,,,
+N,72,M,,N,,,2,300,,,Y,0,0,,8,,N,,,,
+N,65,F,,N,,,2,500,300,,Y,40,0,,6.5,,N,,,,
+N,66,F,,N,,,4,600,500,,Y,35,103,,5,,N,,,,
+N,72,M,,Y,French Horn,,3,300,2000,,N,20,0,,7,,N,,,,
+N,62,F,,Y,Flute,,4,600,1000,,N,60,125,,8,,N,,,,
+N,71,M,,Y,Piano,,1,460,1000,,N,25,146,,8,,N,,,,
+N,66,M,,Y,Percussion,,2,25,30,,N,18,700,,5,,N,,,,
+N,65,F,,Y,Piano,,1,0.6,0.9,,N,35,43,,7,,N,,,,
+N,66,F,,Y,Viola,,5,200,1000,,N,24,,,6,,N,,,,
+N,73,M,,Y,Violin,,4,210,300,,N,75,0,,6.5,,N,,,,
+N,64,F,,N,,,1,300,1000,,N,60,0,,7,,N,,,,
+N,70,M,,N,,,4,350,700,,N,30,0,,7.5,,N,,,,
+N,64,F,,N,,,1,300,400,,N,30,75,,7,,N,,,,
+N,71,M,,N,,,2,350,600,,N,20,0,,7,,N,,,,
+N,70,M,,N,,,3,400,1300,,N,30,0,,8.5,,N,,,,
+N,63,F,,Y,Guitar,,2,363,600,,N,30,313,,8.8,,N,,,,
+N,71,F,,Y,Clarinet,,2,6500,9000,,N,35,0,,7.5,,N,,,,
+N,,F,,Y,Guitar,,1,7000,8000,,N,20,75,,8,,N,,,,
+N,76,M,,Y,Piano,,1,315,1300,,N,0,0,,7,,N,,,,
+N,62.992,F,,Y,Guzheng,,1,600,1000,,N,15,2,,8,,N,,,,
+N,69,M,,Y,Piano,,3,200,1010,,N,17,0,,7,,N,,,,
+N,66,M,,Y,Piano,,2,330,700,,N,0,0,,6.5,,N,,,,
+N,66,F,,Y,Cello,,1,7,12,,N,12,0,,7,,N,,,,
+N,66,M,,N,,,3,300,1200,,N,30,200,,6,,N,,,,
+N,72,M,,N,,,4,315,900,,N,20,0,,6,,N,,,,
+N,64,F,,N,,,4,,,,N,40,30,,5,,N,,,,
+N,67,M,,N,,,2,350,1500,,N,15,0,,8,,N,,,,
