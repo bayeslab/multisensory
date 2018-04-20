@@ -38,12 +38,11 @@ time.taken2 <- end.time2 - start.time2
 
 # Using the 1000 sim bootLog for plot
 
-b <- bootLog2
-qs <- apply(b$t, MARGIN = 2, FUN = quantile)
+qs <- apply(bootLog2$t, MARGIN = 2, FUN = quantile)
 lwr <- qs["25%",]
 upr <- qs["75%",]
-results <- cbind(assorted.csv, mle = b$t0, lwr = lwr, upr = upr)
+results <- cbind(assorted.csv, mle = bootLog2$t0, lwr = lwr, upr = upr)
 library(ggplot2)
 library(dplyr)
-results %>% ggplot(aes(x=c.MarchScore, y=mle, fill=VisCondition, color=VisCondition))+
+sim1000plot <- results %>% ggplot(aes(x=c.MarchScore, y=mle, fill=VisCondition, color=VisCondition))+
   geom_line()+geom_ribbon(aes(ymin=lwr,ymax=upr),alpha=0.1,size=0)+facet_wrap(~MusicExp)
