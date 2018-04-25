@@ -1,0 +1,1286 @@
+---
+title: "stroop"
+output: html_document
+---
+```{r}
+library(rjags)
+library(MASS)
+library(tidyverse)
+library(LaplacesDemon)
+library(label.switching)
+clusters.specification <-
+"model {
+    # N - observations
+    # D_c - continuous dimensions
+    # The D_c+2 column : binary(trained or not)
+    # C - clusters
+
+    for (i in 1:N) {
+        x[i,1:D_c] ~ dmnorm(mu[c[i],1:D_c],omega[1:D_c,1:D_c,c[i]])
+        x[i,D_c+1] ~ dcat(q[c[i],1:5])
+        x[i,D_c+2] ~ dbern(p[c[i]])
+        c[i] ~ dcat(pi)
+    }
+
+    for (j in 1:C) {
+        omega[1:D_c,1:D_c,j] ~ dwish(((D_c+1)/C)*scov, D_c+1)
+        mu[j,1:D_c] ~ dmnorm(mu0,omega[1:D_c,1:D_c,j] )
+        p[j]~dbeta(alpha0,beta0)
+        q[j,1:5]~ddirch(gamma)
+    }
+    
+
+    mu0[1] = 0
+    mu0[2] = 0
+    mu0[3] = 0
+    for (k in 1:D_c) {
+        for (l in 1:D_c) {
+            omega0[k,l] <- ifelse(k == l, 0.25, 0)
+        }
+    }
+
+    pi ~ ddirch(alpha)
+}"
+
+N =210
+D_c = 3
+C= 5
+alpha = rep(0.5,C)
+gamma = rep(1,5)
+alpha0 = 1
+beta0 = 1
+Its =20000
+scov = cov(cndatanewZlog[,c(1,2,3)])
+sprecision = round(solve(cov(cndatanewZlog[,c(1,2,3)])),7)
+
+jags <- jags.model(textConnection(clusters.specification),
+                   data = list('x' = cndatanewZlog,
+                               'N' = N,
+                               'D_c' = D_c,
+                               'C' = C,
+                               'alpha' = alpha,
+                               'alpha0' = alpha0,
+                               'beta0' = beta0,
+                               'gamma' = gamma,
+                               'sprecision' = sprecision,
+                               'scov'=scov
+                        
+                              ),
+                   n.chains = 1,
+                   n.adapt = 5000)
+
+update(jags,n.iter=20000)
+samples = jags.samples(jags,variable.names = c('mu','omega','pi','c','p','q'),n.iter=Its)
+clusterDraw<- matrix(samples$c, nrow =Its, byrow = TRUE)  #column: data points   row: draws
+pDraw = matrix(samples$p,nrow = Its, byrow= TRUE)  # column: clusters    row: draws
+muDraw = array(samples$mu,dim=c(C,D_c,Its))  #column: three continuous dimensions  row: clusters   z-axis: iterations
+oDraw = array(samples$omega, dim=c(D_c,D_c,C,Its)) # 1st: dimensions, 2nd: dimensions, 3rd: clusters, 4th: iterations
+qDraw = array(samples$q,dim = c(C,5,Its))
+piDraw = matrix(samples$pi,nrow = Its,byrow = TRUE) #column: probability being in cluster i   row: iterations
+
+#result = matrix(rep(0,N*N),nrow = N, byrow = TRUE)
+#for (i in Its/2:Its){
+ # result = result+outer(clusterDraw[i,],clusterDraw[i,],FUN = '==')
+#}
+#image(result/Its/2)
+#result[1,]/(Its/2)
+
+
+log_likelihood = function(x,mu,omega,p,q,pi){
+  log_L = 0
+  for (i in 1:N){
+    log_L = log_L + log(sum(sapply(1:C, function(j) exp(log(pi[j]) + dmvn(x[i,1:D_c], mu[j,1:D_c],solve(omega[1:D_c,1:D_c,j]),log=TRUE)+dbern(x[i,D_c+2],p[j],log=TRUE)+dcat(x[i,D_c+1],q[j,1:5],log=TRUE)))))
+  return(log_L)
+  }
+}  
+
+
+
+
+# log_prior = function(mu,omega,p,q,pi){
+#   log_P = 0
+#   for (i in 1:C){
+#     log_P = log_P
+#     + dmvn(mu[i,1:D_c], c(0,0,0) , 1/C*scov , log = TRUE)
+#     + dwishart(omega[1:D_c,1:D_c,i],D_c+1,(C/(D_c+1))*sprecision ,log = TRUE)
+#     + dbeta(p[i], alpha0, beta0, log = TRUE)
+#     + ddirichlet(q[i,],gamma,log=TRUE)
+#   }
+#   log_P = log_P +ddirichlet(pi, alpha, log = TRUE)
+#   return(log_P)
+# }
+
+log_prior = function(mu,omega,p,q,pi){
+  log_P = 0
+  for (i in 1:C){
+    log_P = log_P
+    + dnormwishart(mu[i,1:D_c],c(0,0,0),1,omega[1:D_c,1:D_c,i],(C/(D_c+1))*sprecision,D_c+1,log=TRUE)
+    + dbeta(p[i], alpha0, beta0, log = TRUE)
+    + ddirichlet(q[i,],gamma,log=TRUE)
+  }
+  log_P = log_P +ddirichlet(pi, alpha, log = TRUE)
+  return(log_P)
+}
+
+# highestL = which.max(rev(sapply(1:Its,function(t) log_likelihood(cndatanewZlog,muDraw[1:C,1:D_c,t],oDraw[1:D_c,1:D_c,1:C,t],pDraw[t,],qDraw[1:C,1:5,t],piDraw[t,]))))
+
+
+
+highestL = which.max(rev(sapply(1:Its,function(t) log_likelihood(cndatanewZlog,muDraw[1:C,1:D_c,t],oDraw[1:D_c,1:D_c,1:C,t],pDraw[t,],qDraw[1:C,1:5,t],piDraw[t,]))))
+
+muH = muDraw[1:C,1:D_c,highestL]
+qH = qDraw[1:C,1:5,highestL]
+piH = piDraw[highestL,]
+oH = oDraw[1:D_c,1:D_c,1:C,highestL]
+pH = pDraw[highestL,]
+
+# muH = rowMeans(muDraw, na.rm = FALSE, dims = 2)
+# qH = rowMeans(qDraw, na.rm = FALSE, dims = 2)
+# piH = colMeans(piDraw, na.rm = FALSE, dims = 1)
+# oH = rowMeans(oDraw, na.rm = FALSE, dims = 3)
+# pH = colMeans(pDraw,dims=1)
+
+# LHmatrix = function(mu,omega,p,q,pi){
+#    lpreCov = lapply(1:C, function(t) omega[1:D_c,1:D_c,t][upper.tri(omega[1:D_c,1:D_c,t],diag= TRUE)])
+#    preCov = do.call('rbind',lpreCov)
+#    Lmatrix = cbind(mu,p,q,pi,preCov)
+#    return(Lmatrix)
+#  }
+#  matrix4labelH = LHmatrix(muH,oH,pH,qH,piH)
+# 
+#  LSmatrix = function(muDraw,oDraw,pDraw,qDraw,piDraw){
+#    LSmatrix = array(rep(0,Its*C*16),dim=c(Its,C,16))
+#    for (i in 1:Its){
+#      LSmatrix[i,1:C,1:16] = LHmatrix(muDraw[1:C,1:D_c,i],oDraw[1:D_c,1:D_c,1:C,i],pDraw[i,],qDraw[1:C,1:5,i],piDraw[i,])
+#    }
+#    return(LSmatrix)
+#  }
+# 
+#  matrix4labelD = LSmatrix(muDraw,oDraw,pDraw,qDraw,piDraw)
+# 
+# 
+# finalCluster = label.switching(method=c('PRA'),z = clusterDraw,K = C,prapivot=matrix4labelH,mcmc = matrix4labelD)$clusters
+# permutations = label.switching(method=c('PRA'),z = clusterDraw,K = C,prapivot=matrix4labelH,mcmc = matrix4labelD)$permutations
+# filter(cdata[,1:9],Total_Years_Playing != 'M',AVG_Prac_during_most != 'M',AVG_Prac_Current != 'M',OnsetAge != 'M',OnsetAge_Trained!='M')
+# 
+# 
+# cdatanew1
+
+
+
+
+chib = log_prior(muH,oH,pH,qH,piH)+log_likelihood(cndatanewZlog,muH,oH,pH,qH,piH)
+
+
+
+
+
+
+
+
+
+
+mu.oMarginal.estimate =
+  function(x,z,mu0,omega0,mu,omega,Its){
+    MarginalIts = 0
+    for (i in 1:Its){
+      Marginalk = 0
+      for (j in 1:C){
+        if(sum(z[i,]==j)>1){
+          sMean = c(mean(x[z[i,]==j,][,1]),mean(x[z[i,]==j,][,2]),mean(x[z[i,]==j,][,3]))
+          mean = (mu0+sum(z[i,]==j)*sMean)/(1+sum(z[i,]==j))
+          slist = lapply(1:sum(z[i,]==j), function(t) outer(x[z[i,]==j,][t,] - sMean,x[z[i,]==j,][t,] - sMean,FUN = '*'))
+          S = Reduce('+',slist)
+          t = Cov2Prec(omega0)+S+(sum(z[i,]==j)/(1+sum(z[i,]==j)))*outer(sMean-mu0,sMean-mu0,FUN = "*")
+          Marginalk = Marginalk+dnormwishart(mu[j,1:D_c],mean,1+sum(z[i,]==j),omega[1:D_c,1:D_c,j],round(Cov2Prec(t),5),D_c+1+sum(z[i,]==j),log=TRUE)
+        }
+          else if (sum(z[i,]==j)==0){
+            Marginalk = Marginalk + dnormwishart(mu[j,1:D_c],mu0,1,omega[1:D_c,1:D_c,j],omega0,D_c+1,log=TRUE)
+          }
+          else if (sum(z[i,]==j)==1){
+            mean = (mu0+sum(x[z[i,]==j,]))/(1+sum(z[i,]==j))
+            sMean = c(mean(x[z[i,]==j,][1]),mean(x[z[i,]==j,][2]),mean(x[z[i,]==j,][3]))
+            S =  outer(c(x[z[i,]==j,] - sMean),c(x[z[i,]==j,] - sMean),FUN = '*')
+            t = Cov2Prec(omega0)+S+(sum(z[i,]==j)/(1+sum(z[i,]==j)))*outer(mu0-sMean,mu0-sMean,FUN = "*")
+            Marginalk = Marginalk+dnormwishart(mu[j,1:D_c],mean,1+sum(z[i,]==j),omega[1:D_c,1:D_c,j],round(Cov2Prec(t),5),D_c+1+sum(z[i,]==j),log=TRUE)
+          }
+      }
+       Marginalk = exp(Marginalk)
+       MarginalIts = MarginalIts+Marginalk
+    }
+    return(log(mean(MarginalIts)))
+}
+
+
+chib = chib-mu.oMarginal.estimate(cndatanewZlog[,1:D_c],clusterDraw,c(0,0,0),round((C/(D_c+1))*sprecision,5),muH,oH,Its)
+
+
+# muMarginal.estimate = function(x,z,mu0,omega0,mu,omegaDraw,Its){
+#   MarginalIts = 0
+#   for (i in 1:Its){
+#     Marginalk = 0
+#     for (j in 1:C){
+#       if(sum(z[i,]==j)>1){
+#         sumOfomega = sum(z[i,]==j)*omegaDraw[1:D_c,1:D_c,j,i]
+#         sMean = c(mean(x[z[i,]==j,][,1]),mean(x[z[i,]==j,][,2]),mean(x[z[i,]==j,][,3]))
+#         Marginalk = Marginalk + dmvn(mu[j,1:D_c],t(solve(sumOfomega+omega0)%*%(omega0%*%mu0+sumOfomega%*%sMean)),solve(sumOfomega+omega0),log=TRUE)
+#       }
+#       else if (sum(z[i,]==j)==0){
+#         Marginalk = Marginalk + dmvn(mu[j,1:D_c],mu0,solve(omega0),log=TRUE)
+#       }
+#       else if (sum(z[i,]==j)==1){
+#         sumOfomega = sum(z[i,]==j)*omegaDraw[1:D_c,1:D_c,j,i]
+#         sMean = c(mean(x[z[i,]==j,][1]),mean(x[z[i,]==j,][2]),mean(x[z[i,]==j,][3]))
+#         Marginalk = Marginalk + dmvn(mu[j,1:D_c],t(solve(sumOfomega+omega0)%*%(omega0%*%mu0+sumOfomega%*%sMean)),solve(sumOfomega+omega0),log=TRUE)
+#       }
+#     }
+#      Marginalk = exp(Marginalk)
+#      MarginalIts = MarginalIts+Marginalk
+#   }
+#   return(log(mean(MarginalIts)))
+# }
+# 
+# 
+# 
+# chib = chib - muMarginal.estimate(cndatanewZlog[,1:D_c],clusterDraw,c(0,0,0),C*sprecision,muH,oDraw,Its)
+# 
+# 
+# fix.mu <-
+# "model {
+#     # N - observations
+#     # D_c - continuous dimensions
+#     # The D_c+2 column : binary(trained or not)
+#     # C - clusters
+# 
+#     for (i in 1:N) {
+#         x[i,1:D_c] ~ dmnorm(muH[c[i],1:D_c],omega[1:D_c,1:D_c,c[i]])
+#         x[i,D_c+1] ~ dcat(q[c[i],1:5])
+#         x[i,D_c+2] ~ dbern(p[c[i]])
+#         c[i] ~ dcat(pi)
+#     }
+# 
+#     for (j in 1:C) {
+#         omega[1:D_c,1:D_c,j]~dwish(((D_c+2)/C)*scov,D_c+2)
+#         p[j]~dbeta(alpha0,beta0)
+#         q[j,1:5]~ddirch(gamma)
+#     }
+# 
+# 
+#     for (k in 1:D_c) {
+#         for (l in 1:D_c) {
+#             omega0[k,l] <- ifelse(k == l, 0.25, 0)
+#         }
+#     }
+# 
+#     pi ~ ddirch(alpha)
+# }"
+# 
+# muFix <- jags.model(textConnection(fix.mu),
+#                    data = list('x' = cndatanewZlog,
+#                                'N' = N,
+#                                'D_c' = D_c,
+#                                'C' = C,
+#                                'alpha' = alpha,
+#                                'alpha0' = alpha0,
+#                                'beta0' = beta0,
+#                                'gamma' = gamma,
+#                                'muH' = muH,
+#                                'sprecision' = sprecision,
+#                                'scov' = scov
+#                               ),
+#                    n.chains = 1,
+#                    n.adapt = 3000)
+# 
+# update(muFix,n.iter=20000)
+# samples.fix.mu = jags.samples(muFix,variable.names = c('omega','pi','c','p','q'),n.iter=Its)
+# clusterDraw.fix.mu = matrix(samples.fix.mu$c,nrow = Its, byrow =TRUE)
+# 
+# oMarginal.estimate = function(x,z,mu0,omega0,omega,mu,Its){
+#   MarginalIts = 0
+#   for (i in 1:Its){
+#     Marginalk = 0
+#     for (j in 1:C){
+#       if (sum(z[i,]==j)  >1){
+#         slist = lapply(1:sum(z[i,]==j), function(t) outer(x[z[i,]==j,][t,] - mu[j,1:D_c],x[z[i,]==j,][t,] - mu[j,1:D_c],FUN = '*'))
+#         S = Reduce('+',slist)
+#         t = Cov2Prec(((D_c+2)/C)*scov + S)
+#         Marginalk = Marginalk + dwishart(omega[1:D_c,1:D_c,j],D_c+2+sum(z[i,]==j),t,log = TRUE)
+#       }
+#       else if (sum(z[i,]==j) == 0 ){
+#         Marginalk = Marginalk+dwishart(omega[1:D_c,1:D_c,j],D_c+2,(C/(D_c+2))*sprecision,log=TRUE)
+#       }
+#       else if (sum(z[i,]==j)==1){
+#         slist = lapply(1:sum(z[i,]==j), function(t) outer(x[z[i,]==j,][t] - mu[j,1:D_c],x[z[i,]==j,][t] - mu[j,1:D_c],FUN = '*'))
+#         S = Reduce('+',slist)
+#         t = Cov2Prec(((D_c+2)/C)*scov + S)
+#         Marginalk = Marginalk + dwishart(omega[1:D_c,1:D_c,j],D_c+2,t,log = TRUE)
+#       }
+#     }
+#     Marginalk = exp(Marginalk)
+#     MarginalIts = MarginalIts + Marginalk
+#   }
+#   return(log(mean(MarginalIts)))
+# }
+# 
+# 
+# chib = chib - oMarginal.estimate(cndatanewZlog[,1:D_c],clusterDraw.fix.mu,c(0,0,0),1/((D_c+1)*C) * sprecision,oH,muH,Its)
+# 
+# 
+# 
+# 
+fix.mu.omega <-
+"model {
+    # N - observations
+    # D_c - continuous dimensions
+    # The D_c+2 column : binary(trained or not)
+    # C - clusters
+
+    for (i in 1:N) {
+        x[i,1:D_c] ~ dmnorm(muH[c[i],1:D_c],oH[1:D_c,1:D_c,c[i]])
+        x[i,D_c+1] ~ dcat(q[c[i],1:5])
+        x[i,D_c+2] ~ dbern(p[c[i]])
+        c[i] ~ dcat(pi)
+    }
+
+    for (j in 1:C) {
+        p[j]~dbeta(alpha0,beta0)
+        q[j,1:5]~ddirch(gamma)
+    }
+
+
+    pi ~ ddirch(alpha)
+}"
+
+
+mu.oFix <- jags.model(textConnection(fix.mu.omega),
+                   data = list('x' = cndatanewZlog,
+                               'N' = N,
+                               'D_c' = D_c,
+                               'C' = C,
+                               'alpha' = alpha,
+                               'alpha0' = alpha0,
+                               'beta0' = beta0,
+                               'gamma' = gamma,
+                               'oH' = oH,
+                               'muH'=muH
+                              ),
+                   n.chains = 1,
+                   n.adapt = 5000)
+
+update(mu.oFix,n.iter=20000)
+samples.fix.mu.omega = jags.samples(mu.oFix,variable.names = c('pi','c','p','q'),n.iter=Its)
+clusterDraw.fix.mu.omega = matrix(samples.fix.mu.omega$c,nrow = Its, byrow =TRUE)
+
+
+pMarginal.estimate = function(x,z,alpha0,beta0,p,Its){
+  #x here is the D_c+2 th col
+  MarginalIts = 0
+  for (i in 1:Its){
+    Marginalk = 0
+    for (j in 1:C){
+      whichInk_trained = sum(x[z[i,]==j])
+      whichInk_not = length(x[z[i,]==j])-whichInk_trained
+      Marginalk = Marginalk + dbeta(p[j], alpha0+whichInk_trained, beta0+whichInk_not, log = TRUE)
+    }
+    Marginalk = exp(Marginalk)
+    MarginalIts = MarginalIts+Marginalk
+  }  
+  return(log(mean(MarginalIts)))
+}
+  
+chib = chib - pMarginal.estimate(cndatanewZlog[,D_c+2],clusterDraw.fix.mu.omega,alpha0,beta0,pH,Its)
+
+
+
+fix.omega.mu.p <-
+"model {
+    # N - observations
+    # D_c - continuous dimensions
+    # The D_c+2 column : binary(trained or not)
+    # C - clusters
+
+    for (i in 1:N) {
+        x[i,1:D_c] ~ dmnorm(muH[c[i],1:D_c],oH[1:D_c,1:D_c,c[i]])
+        x[i,D_c+1] ~ dcat(q[c[i],1:5])
+        x[i,D_c+2] ~ dbern(pH[c[i]])
+        c[i] ~ dcat(pi)
+    }
+
+    for (j in 1:C) {
+        q[j,1:5]~ddirch(gamma)
+    }
+  
+
+    pi ~ ddirch(alpha)
+}"
+
+
+o.mu.pFix <- jags.model(textConnection(fix.omega.mu.p),
+                   data = list('x' = cndatanewZlog,
+                               'N' = N,
+                               'D_c' = D_c,
+                               'C' = C,
+                               'alpha' = alpha,
+                               'alpha0' = alpha0,
+                               'beta0' = beta0,
+                               'gamma' = gamma,
+                               'oH' = oH,
+                               'muH'=muH,
+                               'pH'=pH
+                              ),
+                   n.chains = 1,
+                   n.adapt = 5000)
+
+update(o.mu.pFix,n.iter=20000)
+samples.fix.omega.mu.p = jags.samples(o.mu.pFix,variable.names = c('pi','c','q'),n.iter=Its)
+clusterDraw.fix.omega.mu.p = matrix(samples.fix.omega.mu.p$c,nrow = Its, byrow =TRUE)
+
+
+qMarginal.estimate = function(x,z,gamma,q,Its){
+  #x here is the D_c+1th column
+  MarginalIts = 0
+  for (i in 1:Its){
+    Marginalk = 0
+    for (j in 1:C){
+      whichInK_1 = sum(x[z[i,]==j]==1)
+      whichInK_2 = sum(x[z[i,]==j]==2)
+      whichInK_3 = sum(x[z[i,]==j]==3)
+      whichInK_4 = sum(x[z[i,]==j]==4)
+      whichInK_5 = sum(x[z[i,]==j]==5)
+      Marginalk = Marginalk + ddirichlet(q[j,],gamma+c(whichInK_1,whichInK_2,whichInK_3,whichInK_4,whichInK_5),log=TRUE)
+    }
+    Marginalk = exp(Marginalk)
+    MarginalIts = MarginalIts + Marginalk
+  }
+  return(log(mean(MarginalIts)))
+}
+
+chib = chib - qMarginal.estimate(cndatanewZlog[,D_c+1],clusterDraw.fix.omega.mu.p,rep(1,5),qH,Its)
+
+fix.omega.mu.p.q <-
+"model {
+    # N - observations
+    # D_c - continuous dimensions
+    # The D_c+2 column : binary(trained or not)
+    # C - clusters
+
+    for (i in 1:N) {
+        x[i,1:D_c] ~ dmnorm(muH[c[i],1:D_c],oH[1:D_c,1:D_c,c[i]])
+        x[i,D_c+1] ~ dcat(qH[c[i],1:5])
+        x[i,D_c+2] ~ dbern(pH[c[i]])
+        c[i] ~ dcat(pi)
+    }
+    pi ~ ddirch(alpha)
+}"
+
+
+o.mu.p.qFix <- jags.model(textConnection(fix.omega.mu.p.q),
+                   data = list('x' = cndatanewZlog,
+                               'N' = N,
+                               'D_c' = D_c,
+                               'C' = C,
+                               'alpha' = alpha,
+                               'alpha0' = alpha0,
+                               'beta0' = beta0,
+                               'gamma' = gamma,
+                               'oH' = oH,
+                               'muH'=muH,
+                               'pH'=pH,
+                               'qH'=qH
+                              ),
+                   n.chains = 1,
+                   n.adapt = 5000)
+
+update(o.mu.p.qFix,n.iter=20000)
+samples.fix.omega.mu.p.q = jags.samples(o.mu.p.qFix,variable.names = c('pi','c'),n.iter=Its)
+clusterDraw.fix.omega.mu.p.q = matrix(samples.fix.omega.mu.p.q$c,nrow = Its, byrow =TRUE)
+
+
+piMarginal.estimate = function(z,alpha,pi,Its){
+  MarginalIts = 0
+  for (i in 1:Its){
+    Marginalk = 0
+    whichink = sapply(1:C, function(t) sum(z[i,]==t))
+    Marginalk = Marginalk + ddirichlet(pi,alpha+whichink,log=TRUE)
+    Marginalk = exp(Marginalk)
+    MarginalIts = MarginalIts+Marginalk
+  }
+  return(log(mean(MarginalIts)))
+}
+
+chib = chib-piMarginal.estimate(clusterDraw.fix.omega.mu.p.q,alpha,piH,Its)
+chib
+
+
+
+#chibList6 = c(chibList6,chib)
+# name4vec = filter(cdata[,1:9],Total_Years_Playing != 'M',AVG_Prac_during_most != 'M',AVG_Prac_Current != 'M',OnsetAge != 'M',OnsetAge_Trained!='M')[['SID']]
+# cdatanew1
+```
+
+```{r}
+#6,-51
+#5,-42
+#7,-53
+#8, -50
+#4,-55
+#cndatanewZlog.new = rbind(cndatanewZlog.noAm,cndatanewZlog[cndatanewZlog[,4]==5,])
+#cndatanewZlog.new
+
+clusters.specification <-
+"model {
+    # N - observations
+    # D_c - continuous dimensions
+    # The D_c+2 column : binary(trained or not)
+    # C - clusters
+
+    for (i in 1:N) {
+      if (i<=176){
+            x[i,1:D_c] ~ dmnorm(mu[c[i],1:D_c],omega[1:D_c,1:D_c,c[i]])
+            x[i,D_c+1] ~ dcat(q[c[i],1:5])
+            x[i,D_c+2] ~ dbern(p[c[i]])
+            c[i] ~ dcat(pi)
+      }
+      else{
+            x[i,1:D_c] ~ dmnorm(mu[c[i],1:D_c],omega[1:D_c,1:D_c,c[i]])
+            x[i,D_c+1] ~ dcat(q[c[i],1:5])
+            x[i,D_c+2] ~ dbern(p[c[i]])
+            c[i] <- C+1
+      }
+
+    }
+
+    for (j in 1:C) {
+        omega[1:D_c,1:D_c,j] ~ dwish(nu*scov, nu)
+        mu[j,1:D_c] ~ dmnorm(mu0,omega[1:D_c,1:D_c,j] )
+        p[j]~dbeta(alpha0,beta0)
+        q[j,1:4]~ddirch(gamma)
+    }
+    omega[1:D_c,1:D_c,C+1] ~ dwish(omegaSpike,nu)
+    mu[C+1,1:D_c] ~ dmnorm(mu0,omega[1:D_c,1,D_c,j])
+    p[C+1] ~ dbeta(alpha0,beta0) 
+    q[C+1,] ~ ddirch(gamma)
+  
+    pi ~ ddirch(alpha)
+}"
+
+N =210
+D_c = 3
+C= 3
+alpha = rep(1,C)
+gamma = rep(1,4)
+alpha0 = 1
+beta0 = 1
+mu0 = c(0,0,0)
+omegaSpike = diag(x=20,nrow=3,ncol=3)
+nu = D_c+1
+Its =50000
+scov = cov(cndatanewZlog.noAm[,c(1,2,3)])
+sprecision = round(solve(cov(cndatanewZlog.noAm[,c(1,2,3)])),7)
+
+jags <- jags.model(textConnection(clusters.specification),
+                   data = list('x' = cndatanewZlog.new,
+                               'N' = N,
+                               'D_c' = D_c,
+                               'C' = C,
+                               'alpha' = alpha,
+                               'alpha0' = alpha0,
+                               'beta0' = beta0,
+                               'gamma' = gamma,
+                               'sprecision' = sprecision,
+                               'scov'=scov,
+                               'mu0'=mu0,
+                               'omega0'=omega0,
+                               'omegaSpike'=omegaSpike,
+                               'nu'=nu
+                        
+                              ),
+                   n.chains = 1,
+                   n.adapt = 50000)
+
+update(jags,n.iter=50000)
+samples = jags.samples(jags,variable.names = c('mu','omega','pi','c','p','q'),n.iter=Its)
+clusterDraw<- matrix(samples$c, nrow =Its, byrow = TRUE)  #column: data points   row: draws
+pDraw = matrix(samples$p,nrow = Its, byrow= TRUE)  # column: clusters    row: draws
+muDraw = array(samples$mu,dim=c(C,D_c,Its))  #column: three continuous dimensions  row: clusters   z-axis: iterations
+oDraw = array(samples$omega, dim=c(D_c,D_c,C,Its)) # 1st: dimensions, 2nd: dimensions, 3rd: clusters, 4th: iterations
+qDraw = array(samples$q,dim = c(C,4,Its))
+piDraw = matrix(samples$pi,nrow = Its,byrow = TRUE) #column: probability being in cluster i   row: iterations
+
+
+
+log_likelihood = function(x,mu,omega,p,q,pi){
+  log_L = 0
+  for (i in 1:N){
+    log_L = log_L + log(sum(sapply(1:C, function(j) exp(log(pi[j]) + dmvn(x[i,1:D_c], mu[j,1:D_c],solve(omega[1:D_c,1:D_c,j]),log=TRUE)+dbern(x[i,D_c+2],p[j],log=TRUE)+dcat(x[i,D_c+1],q[j,1:4],log=TRUE)))))
+  }
+    return(log_L)
+}  
+
+
+
+
+log_prior = function(mu,omega,p,q,pi){
+   log_P = 0
+   for (i in 1:C){
+     log_P = log_P
+     + dnormwishart(mu[i,1:D_c],c(0,0,0),1,omega[1:D_c,1:D_c,i],1/nu*sprecision,nu,log=TRUE)
+     + dbeta(p[i], alpha0, beta0, log = TRUE)
+     + ddirichlet(q[i,],gamma,log=TRUE)
+   }
+   log_P = log_P +ddirichlet(pi, alpha, log = TRUE)
+   return(log_P)
+ }
+
+
+
+highestL = which.max(rev(sapply(1:Its,function(t) log_likelihood(cndatanewZlog.noAm,muDraw[1:C,1:D_c,t],oDraw[1:D_c,1:D_c,1:C,t],pDraw[t,],qDraw[1:C,1:4,t],piDraw[t,]))))
+
+muH = muDraw[1:C,1:D_c,highestL]
+qH = qDraw[1:C,1:4,highestL]
+piH = piDraw[highestL,]
+oH = oDraw[1:D_c,1:D_c,1:C,highestL]
+pH = pDraw[highestL,]
+
+
+chib = log_prior(muH,oH,pH,qH,piH)+log_likelihood(cndatanewZlog.noAm,muH,oH,pH,qH,piH)
+
+
+
+estimation = function(x_con,x_ca,x_b,mu,omega,p,q,pi,z,mu0,omega0,alpha0,beta0,gamma,alpha,Its){
+  MarginalIts = 0
+  for (i in 1:Its){
+    Marginalk=0
+    for (j in 1:C){
+      if(sum(z[i,]==j)>1){
+        whichInk_1 = sum(x_ca[z[i,]==j]==1)
+        whichInk_2 = sum(x_ca[z[i,]==j]==2)
+        whichInk_3 = sum(x_ca[z[i,]==j]==3)
+        whichInk_4 = sum(x_ca[z[i,]==j]==4)
+       # whichInk_5 = sum(x_ca[z[i,]==j]==5)
+        Marginalk = Marginalk + ddirichlet(q[j,],gamma+c(whichInk_1,whichInk_2,whichInk_3,whichInk_4),log=TRUE)
+
+        whichInk_trained = sum(x_b[z[i,]==j])
+        whichInk_not = length(x_b[z[i,]==j])-whichInk_trained
+        Marginalk = Marginalk + dbeta(p[j], alpha0+whichInk_trained, beta0+whichInk_not, log = TRUE)
+
+        
+          sMean = c(mean(x_con[z[i,]==j,][,1]),mean(x_con[z[i,]==j,][,2]),mean(x_con[z[i,]==j,][,3]))
+          mean = (mu0+sum(z[i,]==j)*sMean)/(1+sum(z[i,]==j))
+          slist = lapply(1:sum(z[i,]==j), function(t) outer(x_con[z[i,]==j,][t,] - sMean,x_con[z[i,]==j,][t,] - sMean,FUN = '*'))
+          S = Reduce('+',slist)
+          t = Cov2Prec(omega0)+S+(sum(z[i,]==j)/(1+sum(z[i,]==j)))*outer(sMean-mu0,sMean-mu0,FUN = "*")
+          Marginalk = Marginalk+dnormwishart(mu[j,1:D_c],mean,1+sum(z[i,]==j),omega[1:D_c,1:D_c,j],round(Cov2Prec(t),5),nu+sum(z[i,]==j),log=TRUE)
+      }
+      else if (sum(z[i,]==j)==0){
+        Marginalk = Marginalk + ddirichlet(q[j,],gamma,log=TRUE)
+
+        Marginalk = Marginalk + dbeta(p[j], alpha0, beta0, log = TRUE)
+
+        Marginalk = Marginalk+dnormwishart(mu[j,1:D_c],mu0,1,omega[1:D_c,1:D_c,j],omega0,nu,log=TRUE)        
+      }
+      else if(sum(z[i,]==j)==1){
+        whichInk_1 = sum(x_ca[z[i,]==j]==1)
+        whichInk_2 = sum(x_ca[z[i,]==j]==2)
+        whichInk_3 = sum(x_ca[z[i,]==j]==3)
+        whichInk_4 = sum(x_ca[z[i,]==j]==4)
+     #   whichInk_5 = sum(x_ca[z[i,]==j]==5)
+        Marginalk = Marginalk + ddirichlet(q[j,],gamma+c(whichInk_1,whichInk_2,whichInk_3,whichInk_4),log=TRUE)
+
+        whichInk_trained = sum(x_b[z[i,]==j])
+        whichInk_not = length(x_b[z[i,]==j])-whichInk_trained
+        Marginalk = Marginalk + dbeta(p[j], alpha0+whichInk_trained, beta0+whichInk_not, log = TRUE)
+
+            mean = (mu0+sum(x_con[z[i,]==j,]))/(1+sum(z[i,]==j))
+            sMean = c(mean(x_con[z[i,]==j,][1]),mean(x_con[z[i,]==j,][2]),mean(x_con[z[i,]==j,][3]))
+            S =  outer(c(x_con[z[i,]==j,] - sMean),c(x_con[z[i,]==j,] - sMean),FUN = '*')
+            t = Cov2Prec(omega0)+S+(sum(z[i,]==j)/(1+sum(z[i,]==j)))*outer(mu0-sMean,mu0-sMean,FUN = "*")
+            Marginalk = Marginalk+dnormwishart(mu[j,1:D_c],mean,1+sum(z[i,]==j),omega[1:D_c,1:D_c,j],round(Cov2Prec(t),5),nu+sum(z[i,]==j),log=TRUE)
+      }
+    }
+    whichink = sapply(1:C, function(t) sum(z[i,]==t))
+    Marginalk = Marginalk + ddirichlet(pi,alpha+whichink,log=TRUE)
+    Marginalk = exp(Marginalk)
+    MarginalIts = MarginalIts + Marginalk
+  }
+    return(log(mean(MarginalIts)))
+}
+
+
+
+chib = chib-estimation(cndatanewZlog.noAm[,1:D_c],cndatanewZlog.noAm[,D_c+1],cndatanewZlog.noAm[,D_c+2],muH,oH,pH,qH,piH,clusterDraw,c(0,0,0),1/nu*sprecision,1,1,gamma,rep(1,C),Its)
+chib
+
+
+
+
+
+# 
+# matrix1 = matrix(c(1,2,3,4,5,6),nrow = 2,ncol = 3,byrow = TRUE)
+# matrix2 = matrix(c(1,1,1),c(4,4,4),byrow = TRUE)
+# colSums(matrix1,dims=1,na.rm=TRUE)
+# arraytest = array(c(1,2,3,4,5,6,1,2,3,4,5,6,1,2,3,4,12321,6),dim=c(2,3,3))
+# arraytest[1:2,1:3,c(TRUE,FALSE,TRUE)]
+# arraytest
+# rowSums(arraytest[1:2,1:3,c(TRUE,FALSE,TRUE)],dims=2)
+# filter(cdatanewZ,TrainedOrNot == 0)
+# cdatanewZ
+
+```
+
+```{r setup, include=FALSE}
+
+# data = data[,c('Total_Years_Playing','AVG_Prac_during_most','AVG_Prac_Current','OnsetAge','Total_Years_Playing_Trained')]
+# 
+# datanew1
+# 
+# filter(datanew1,AVG_Prac_Current <= 2,TrainedOrNot == 1) #113
+# 
+# filter(datanew1,TrainedOrNot == 1) #162
+# filter(datanew1,TrainedOrNot == 0) #55
+# filter(datanew1,TrainedOrNot == 0, Total_Years_Playing!=0) #14
+# 
+# clean = function (data,pcols = c('OnsetAge','OnsetAge_Trained')){
+#   data = data[1:nrow(data)-1,1:ncol(data)-1]
+#   data[data == 'M'] = NA
+#   for (i in c('OnsetAge','OnsetAge_Trained')){
+#     data[[i]][data[[i]] == 'N'] = 10000
+#     data[[i]] = as.numeric(data[[i]])
+#     data[[i]] = cut(data[[i]],labels = FALSE,c(0,5,10,15,30,1000000),right = TRUE,include.lowest = TRUE)
+# }
+#   for (i in colnames(data)){
+#     data[[i]] = as.numeric(data[[i]])
+#   }
+#   return(data)
+# }
+# 
+# 
+# noTrainedSuffix = grep("_Trained",colnames(datanew))
+# 
+# 
+# datanew = datanew[- as.numeric(noTrainedSuffix)]
+# 
+# 
+# 
+# 
+# 
+# 
+# cdatanew1 = cdata[,c('Total_Years_Playing','AVG_Prac_during_most','AVG_Prac_Current','OnsetAge','Total_Years_Playing_Trained')]
+# cdatanew1$OnsetAge[cdatanew1$OnsetAge == 'N'] = 10000
+# cdatanew1$OnsetAge = as.numeric(cdatanew1$OnsetAge)
+# cdatanew1[cdatanew1 == 'M'] = NA
+# for (i in colnames(cdatanew1)){
+#   cdatanew1[[i]] = as.numeric(cdatanew1[[i]])
+# }
+# cdatanew1 = mutate(cdatanew1,OnsetAgeG = cut(OnsetAge,c(0,5,10,15,30,100000),labels = c(1,2,3,4,5),include.lowest = TRUE,right = TRUE))
+# cdatanew1 = mutate(cdatanew1,TrainedOrNot = Total_Years_Playing_Trained != 0)
+# cdatanew1$TrainedOrNot = as.numeric(cdatanew1$TrainedOrNot)
+# cdatanew1 = cdatanew1[complete.cases(cdatanew1),]
+# cdatanew1$OnsetAgeG = as.numeric(cdatanew1$OnsetAgeG)
+# cdatanew1$OnsetAge <- NULL
+# cdatanew1$Total_Years_Playing_Trained = NULL
+# cdatanew1
+# 
+# 
+# cdatanewZ = mutate(cdatanew1,zTotal = (Total_Years_Playing-mean(Total_Years_Playing))/sd(Total_Years_Playing))
+# cdatanewZ = mutate(cdatanewZ,zAVG_m = (AVG_Prac_during_most-mean(AVG_Prac_during_most))/sd(AVG_Prac_during_most))
+# cdatanewZ = mutate(cdatanewZ,zAVG_c = (AVG_Prac_Current-mean(AVG_Prac_Current))/sd(AVG_Prac_Current))
+# cdatanewZ = cdatanewZ[,c('zTotal','zAVG_m','zAVG_c','OnsetAgeG','TrainedOrNot')]
+# 
+# cdatanewZ
+# 
+# 
+# 
+# logdatanew1 = mutate(datanew1,logTotal = log(datanew1$Total_Years_Playing),logAVG_m = log(datanew1$AVG_Prac_during_most))
+# logdatanew1 = logdatanew1[,c("logTotal",'logAVG_m','OnsetAgeG','TrainedOrNot')]
+# sqrtdatanew1 = mutate(datanew1,sqrtTotal = sqrt(datanew1$Total_Years_Playing),sqrtAVG_m =sqrt(datanew1$AVG_Prac_during_most))
+# sqrtdatanew1 = sqrtdatanew1[,c("sqrtTotal",'sqrtAVG_m','OnsetAgeG','TrainedOrNot')]
+# 
+# cndatanewZ = as.matrix(cdatanewZ)
+# filter(cdatanew1,TrainedOrNot==0)
+sd(cdatanew1$Total_Years_Playing)
+sd(cdatanew1$AVG_Prac_during_most)
+sd(cdatanew1$AVG_Prac_Current)
+samples
+```
+
+## Including Plots
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+
+clusters.specification <-
+"model {
+    # N - observations
+    # D_c - continuous dimensions
+    # The D_c+2 column : binary(trained or not)
+    # C - clusters
+
+    for (i in 1:N) {
+            x[i,1:D_c] ~ dmnorm(mu[c[i],1:D_c,d[i]+1],omega[1:D_c,1:D_c,c[i],d[i]+1])
+            x[i,D_c+1] ~ dcat(q[c[i],1:5])
+            x[i,D_c+2] ~ dbern(p[c[i]])
+            d[i] ~ dbern(s[c[i]])
+            c[i] ~ dcat(pi)
+    }
+
+    for (j in 1:C) {
+        s[j] ~ dbeta(1,1)
+        omega[1:D_c,1:D_c,j,1] ~ dwish(scov[1:D_c,1:D_c,1], nu)
+        #omega[1:D_c,1:D_c,j,2] ~ dwish(scov[1:D_c,1:D_c,2],nu)
+        omega[1:D_c,1:D_c,j,2] = scov[1:D_c,1:D_c,2]
+        mu[j,1:D_c,1] ~ dmnorm(mu0[1,],omega[1:D_c,1:D_c,j,1])
+       #mu[j,1:D_c,2] ~ dmnorm(mu0[2,],omega[1:D_c,1:D_c,j,2])
+        mu[j,1:D_c,2]=mu0[2,]
+        p[j]~dbeta(alpha0,beta0)
+        q[j,1:5]~ddirch(gamma)
+    }
+  
+    pi ~ ddirch(alpha)
+
+
+}"
+
+
+
+
+#cndatanewZ is the musical survey data. The first three columns are Total_years_playing, Playing_hour_during_most, and the current_play_hour. The fourth column is the musical experience group. The fifth column is the Trained_Or_Not column
+
+
+N =210 #number of data in the dataframe
+D_c = 3 #There are three continuous dimensions 
+C= 7 #number of clusters
+alpha = rep(1,C) #prior for the probability of being one cluster
+gamma = rep(1,5) #prior for the probability of being in one of the musical experience categories
+alpha0 = 1 #prior for being trained or untrained 
+beta0 = 1
+Am.pure.mean = colMeans(cndatanewZ[cndatanewZ[,4]==5,][,1:3]) #mean for the spike in each cluster
+covSpike = diag(x=0.001,nrow=3,ncol=3) #covariance for the spike in each cluster
+nu = D_c+1  #prior for degrees of freedom in wishart distribution
+Its =10000 #number of iterations
+mu0 = array(0,dim=c(2,D_c)) 
+mu0[1,]=colMeans(cndatanewZ[cndatanewZ[,4]!=5,1:3])
+mu0[2,]=Am.pure.mean
+#mu0 collect the spike mean and the slab mean together.
+
+scov = array(0,dim=c(D_c,D_c,2))
+scov[1:D_c,1:D_c,1] = cov(cndatanewZ[,c(1,2,3)])
+scov[1:D_c,1:D_c,2] = Cov2Prec(covSpike)
+#scov collect the spike covariance and slab covariance together
+
+
+
+
+
+#variable names: mu is mean, omega is precision, pi is the percentage of data in a cluster, c is the cluster assignment, p is the percentage of trained musician in a cluster, q is the percentage of each musical experience in a cluster. s is the probability of being a spike in a cluster. d is just either a data is in a spike or slab
+
+
+
+jags <- jags.model(textConnection(clusters.specification),
+                   data = list('x' = cndatanewZ,
+                               'N' = N,
+                               'D_c' = D_c,
+                               'C' = C,
+                               'alpha' = alpha,
+                               'alpha0' = alpha0,
+                               'beta0' = beta0,
+                               'gamma' = gamma,
+                               'nu'=nu,
+                               'scov'=scov,
+                               'mu0'=mu0
+                              ),
+                   n.chains = 1,
+                   n.adapt = 30000)
+
+update(jags,n.iter=30000)
+samples = jags.samples(jags,variable.names = c('mu','omega','pi','c','p','q','s','d'),n.iter=Its)
+clusterDraw<- matrix(samples$c, nrow =Its, byrow = TRUE)  #column: data points   row: draws
+pDraw = matrix(samples$p,nrow = Its, byrow= TRUE)  # column: clusters    row: draws
+
+#muDraw = array(samples$mu,dim=c(C,D_c,2,Its))
+muDraw = array(samples$mu,dim=c(C,D_c,2,Its))
+#column: three continuous dimensions  row: clusters   third: either spike or slab   fouth: iterations
+oDraw = array(samples$omega, dim=c(D_c,D_c,C,2,Its)) # 1st: dimensions, 2nd: dimensions, 3rd: clusters, 4th: either spike or slab, 5th: iterations
+qDraw = array(samples$q,dim = c(C,5,Its))
+piDraw = matrix(samples$pi,nrow = Its,byrow = TRUE) #column: probability being in cluster i   row: iterations
+sDraw = matrix(samples$s,nrow=Its,byrow=TRUE)  #column: how many percentage of data is the in the spike for cluster i.
+dDraw = matrix(samples$d,nrow = Its,byrow =TRUE) 
+
+
+
+
+
+
+
+
+
+
+
+
+log_likelihood = function(x,mu,omega,p,q,pi,s){
+  log_L = 0
+  for (i in 1:N){
+      log_L = log_L + log(sum(sapply(1:C, function(j) exp(log(pi[j]) + log(dmvn(x[i,1:D_c], mu[j,1:D_c,2],solve(omega[1:D_c,1:D_c,j,2]))*s[j]+dmvn(x[i,1:D_c], mu[j,1:D_c,1],solve(omega[1:D_c,1:D_c,j,1]))*(1-s[j]))+dbern(x[i,D_c+2],p[j],log=TRUE)+dcat(x[i,D_c+1],q[j,1:5],log=TRUE)))))     
+  }
+  return(log_L)
+}  
+
+
+
+
+
+log_prior = function(mu,omega,p,q,pi,s){
+   log_P = 0
+   for (i in 1:C){
+#     log_P = log_P
+ #    + log(dnormwishart(mu[i,1:D_c,1],c(0,0,0),1,omega[1:D_c,1:D_c,i,1],Cov2Prec(scov[1:D_c,1:D_c,1]),nu)*(1-dbeta(s[i],1,1))+dnormwishart(mu[i,1:D_c,2],Am.pure.mean,1,omega[1:D_c,1:D_c,i,2],Cov2Prec(covSpike),nu)*dbeta(s[i],1,1))
+  #   + dbeta(p[i], alpha0, beta0, log = TRUE)
+  #   + ddirichlet(q[i,],gamma,log=TRUE)
+      log_P = log_P
+     + log(dnormwishart(mu[i,1:D_c,1],c(0,0,0),1,omega[1:D_c,1:D_c,i,1],Cov2Prec(scov[1:D_c,1:D_c,1]),nu)*(1-dbeta(s[i],1,1)))
+     + dbeta(p[i], alpha0, beta0, log = TRUE)
+     + ddirichlet(q[i,],gamma,log=TRUE)
+   }
+   log_P = log_P +ddirichlet(pi, alpha, log = TRUE)
+   return(log_P)
+ }
+
+
+
+highestL = which.max(rev(sapply(1:Its,function(t) log_likelihood(cndatanewZ,muDraw[1:C,1:D_c,1:2,t],oDraw[1:D_c,1:D_c,1:C,1:2,t],pDraw[t,],qDraw[1:C,1:5,t],piDraw[t,],sDraw[t,]))))
+
+muH = muDraw[1:C,1:D_c,1:2,highestL]
+qH = qDraw[1:C,1:5,highestL]
+piH = piDraw[highestL,]
+oH = oDraw[1:D_c,1:D_c,1:C,1:2,highestL]
+pH = pDraw[highestL,]
+sH = sDraw[highestL,]
+
+chib = log_prior(muH,oH,pH,qH,piH,sH)+log_likelihood(cndatanewZ,muH,oH,pH,qH,piH,sH)
+
+
+
+
+
+
+
+
+
+#general structure of the posterior update: Keep a running variable Marginalk in the function so that it starts from 0 after Marginalk is added to MarginalIts for each iteration. 
+
+#I divide the function in three main parts for each cluster iteration to avoid syntax error: The first part deal with the situation where the number of data in a cluster is bigger than 1, the second part deals with the situation where the number of data in a cluster is 0, and the third part deals with the situation where the number of data in a cluster is 1. 
+
+#I further divide each of the three main parts into subsections again to avoid syntax error: For the first part, I consider the situation where there are both more than 1 data points in spike and slab, the situation where there are only 1 data point in spike and slab, and the situation where all of the data points are in either spike or slab.
+#For the second part, there is no need to do that, since it specifically deals with the situation where there isn't any data in the cluster.
+#The third part was broken into a situation where the only one data point is in slab, or that only one is in spike
+
+
+
+
+
+
+estimation = function(x_con,x_ca,x_b,mu,omega,p,q,pi,s,z,d,mu0,scov,alpha0,beta0,gamma,alpha,Its){
+  
+  #arguments: 
+  #x_con: continuous variables, x_ca: categorical(musical experience), x_b: binary(trained or not).
+  #mu,omega,p,q,pi,s are the MLE parameter configurations.
+  #z is clusterDraw, and d is spike-or-slab draw. 
+  #mu0, scov are prior for gaussian,
+  #alpha0,beta0 are prior for binary,
+  #gamma is prior for categorical
+  #alpha is prior for cluster
+  #Its is iterations
+  
+  #The update formula is based on Wikipedia 'Conjugate prior' page
+  
+  
+  MarginalIts = 0
+  for (i in 1:Its){
+    Marginalk=0
+    for (j in 1:C){
+      if(sum(z[i,]==j)>1){
+        
+        #this deals with the musical experience variable update
+        whichInk_1 = sum(x_ca[z[i,]==j]==1) 
+        whichInk_2 = sum(x_ca[z[i,]==j]==2)
+        whichInk_3 = sum(x_ca[z[i,]==j]==3)
+        whichInk_4 = sum(x_ca[z[i,]==j]==4)
+        whichInk_5 = sum(x_ca[z[i,]==j]==5)
+        Marginalk = Marginalk + ddirichlet(q[j,],gamma+c(whichInk_1,whichInk_2,whichInk_3,whichInk_4,whichInk_5),log=TRUE)
+        
+        #this deals with the trained_or_not variable update
+        whichInk_trained = sum(x_b[z[i,]==j])
+        whichInk_not = length(x_b[z[i,]==j])-whichInk_trained
+        Marginalk = Marginalk + dbeta(p[j], alpha0+whichInk_trained, beta0+whichInk_not, log = TRUE)
+        
+        
+        
+        #this updates the variable controlling spike or slab in each cluster
+        whichInk_spike = sum(z[i,d[i,]==1]==j)
+        whichInk_slab = sum(z[i,]==j)-whichInk_spike
+        Marginalk = Marginalk + dbeta(s[j],alpha0+whichInk_spike,beta0+whichInk_slab,log=TRUE)
+
+        #The following are subsections for mean and precision to deal with syntax problems:
+        
+        if(whichInk_spike>1 & whichInk_slab>1){
+          
+          #update for spike's mean and precision
+          
+       #   sMean2 = c(mean(x_con[z[i,]==j & d[i,]==1,][,1]),mean(x_con[z[i,]==j & d[i,]==1,][,2]),mean(x_con[z[i,]==j & d[i,]==1,][,3])) #this calculates the sample mean
+          
+#          mean2 = (mu0[2,]+whichInk_spike*sMean2)/(1+whichInk_spike) #update for mean
+          
+       #   slist2 = lapply(1:whichInk_spike, function(t) outer(x_con[z[i,]==j & d[i,]==1,][t,] - sMean2,x_con[z[i,]==j & d[i,]==1,][t,] - sMean2,FUN = '*'))
+
+    #      S2 = Reduce('+',slist2) #calculate the covariance matrix of the relevant data
+          
+   #       t2 = scov[1:D_c,1:D_c,2]+S2+(whichInk_spike/(1+whichInk_spike))*outer(sMean2-mu0[2,],sMean2-mu0[2,],FUN = "*") #covariance update
+          
+          
+ #         Marginalk = Marginalk+dnormwishart(mu[j,1:D_c,2],mean2,1+whichInk_spike,omega[1:D_c,1:D_c,j,2],round(Cov2Prec(t2),5),nu+whichInk_spike,log=TRUE)
+       
+          
+          #update for slab's mean and precision
+               
+          sMean1 = c(mean(x_con[z[i,]==j & d[i,]==0,][,1]),mean(x_con[z[i,]==j & d[i,]==0,][,2]),mean(x_con[z[i,]==j & d[i,]==0,][,3]))
+          mean1 = (mu0[1,]+sum(z[i,d[i,]==0]==j)*sMean1)/(1+sum(z[i,d[i,]==0]==j))
+          slist1 = lapply(1:whichInk_slab, function(t) outer(x_con[z[i,]==j & d[i,]==0,][t,] - sMean1,x_con[z[i,]==j & d[i,]==0,][t,] - sMean1,FUN = '*'))
+          S1 = Reduce('+',slist1)
+          t1 = scov[1:D_c,1:D_c,1]+S1+(sum(z[i,d[i,]==0]==j)/(1+sum(z[i,d[i,]==0]==j)))*outer(sMean1-mu0[1,],sMean1-mu0[1,],FUN = "*")
+          Marginalk = Marginalk+dnormwishart(mu[j,1:D_c,1],mean1,1+sum(z[i,d[i,]==0]==j),omega[1:D_c,1:D_c,j,1],round(Cov2Prec(t1),5),nu+sum(z[i,d[i,]==0]==j),log=TRUE)   
+  
+          
+        }
+        
+        else if (whichInk_slab==1&whichInk_spike==1){
+          # sMean2 = c(mean(x_con[z[i,]==j & d[i,]==1,][1]),mean(x_con[z[i,]==j & d[i,]==1,][2]),mean(x_con[z[i,]==j & d[i,]==1,][3]))
+          # mean2 = (mu0[2,]+sum(z[i,d[i,]==1]==j)*sMean2)/(1+sum(z[i,d[i,]==1]==j))
+          # slist2 = lapply(1:whichInk_spike, function(t) outer(x_con[z[i,]==j & d[i,]==1,][t] - sMean2,x_con[z[i,]==j & d[i,]==1,][t] - sMean2,FUN = '*'))
+          # S2 = Reduce('+',slist2)
+          # t2 = scov[1:D_c,1:D_c,2]+S2+(sum(z[i,d[i,]==1]==j)/(1+sum(z[i,d[i,]==1]==j)))*outer(sMean2-mu0[2,],sMean2-mu0[2,],FUN = "*")
+          # Marginalk = Marginalk+dnormwishart(mu[j,1:D_c,2],mean2,1+whichInk_spike,omega[1:D_c,1:D_c,j,2],round(Cov2Prec(t2),5),nu+whichInk_spike,log=TRUE)
+
+          
+          
+          
+          
+          sMean1 = c(mean(x_con[z[i,]==j & d[i,]==0,][1]),mean(x_con[z[i,]==j & d[i,]==0,][2]),mean(x_con[z[i,]==j & d[i,]==0,][3]))
+          mean1 = (mu0[1,]+sum(z[i,d[i,]==0]==j)*sMean1)/(1+sum(z[i,d[i,]==0]==j))
+          slist1 = lapply(1:whichInk_slab, function(t) outer(x_con[z[i,]==j & d[i,]==0,][t] - sMean1,x_con[z[i,]==j & d[i,]==0,][t] - sMean1,FUN = '*'))
+          S1 = Reduce('+',slist1)
+          t1 = scov[1:D_c,1:D_c,1]+S1+(sum(z[i,d[i,]==0]==j)/(1+sum(z[i,d[i,]==0]==j)))*outer(sMean1-mu0[1,],sMean1-mu0[1,],FUN = "*")
+          Marginalk = Marginalk+dnormwishart(mu[j,1:D_c,1],mean1,1+whichInk_slab,omega[1:D_c,1:D_c,j,1],round(Cov2Prec(t1),5),nu+whichInk_slab,log=TRUE)      
+        
+        }
+        
+        else if(whichInk_spike==0){
+          
+          #since there is no point in spike, the parameters are valued using spike prior. 
+          # Marginalk = Marginalk+dnormwishart(mu[j,1:D_c,2],mu0[2,],1+sum(z[i,d[i,]==1]==j),omega[1:D_c,1:D_c,j,2],round(Cov2Prec(scov[1:D_c,1:D_c,2]),5),nu,log=TRUE)
+          
+          sMean1 = c(mean(x_con[z[i,]==j & d[i,]==0,][,1]),mean(x_con[z[i,]==j & d[i,]==0,][,2]),mean(x_con[z[i,]==j & d[i,]==0,][,3]))
+          mean1 = (mu0[1,]+sum(z[i,d[i,]==0]==j)*sMean1)/(1+sum(z[i,d[i,]==0]==j))
+          slist1 = lapply(1:whichInk_slab, function(t) outer(x_con[z[i,]==j & d[i,]==0,][t,] - sMean1,x_con[z[i,]==j & d[i,]==0,][t,] - sMean1,FUN = '*'))
+          S1 = Reduce('+',slist1)
+          t1 = scov[1:D_c,1:D_c,1]+S1+(sum(z[i,d[i,]==0]==j)/(1+sum(z[i,d[i,]==0]==j)))*outer(sMean1-mu0[1,],sMean1-mu0[1,],FUN = "*")
+          Marginalk = Marginalk+dnormwishart(mu[j,1:D_c,1],mean1,1+sum(z[i,d[i,]==0]==j),omega[1:D_c,1:D_c,j,1],round(Cov2Prec(t1),5),nu+sum(z[i,d[i,]==0]==j),log=TRUE)             
+        }
+        
+        else if(whichInk_slab==0){
+          
+          #since there is no point in slab, the parameters are values using slab prior
+          Marginalk = Marginalk+dnormwishart(mu[j,1:D_c,1],mu0[1,],1+sum(z[i,d[i,]==0]==j),omega[1:D_c,1:D_c,j,1],round(Cov2Prec(scov[1:D_c,1:D_c,1]),5),nu+sum(z[i,d[i,]==0]==j),log=TRUE)         
+          
+          
+          
+          # sMean2 = c(mean(x_con[z[i,]==j & d[i,]==1,][,1]),mean(x_con[z[i,]==j & d[i,]==1,][,2]),mean(x_con[z[i,]==j & d[i,]==1,][,3]))
+          # mean2 = (mu0[2,]+sum(z[i,d[i,]==1]==j)*sMean2)/(1+sum(z[i,d[i,]==1]==j))
+          # slist2 = lapply(1:whichInk_spike, function(t) outer(x_con[z[i,]==j & d[i,]==1,][t,] - sMean2,x_con[z[i,]==j & d[i,]==1,][t,] - sMean2,FUN = '*'))
+          # S2 = Reduce('+',slist2)
+          # t2 = scov[1:D_c,1:D_c,2]+S2+(sum(z[i,d[i,]==1]==j)/(1+sum(z[i,d[i,]==1]==j)))*outer(sMean2-mu0[2,],sMean2-mu0[2,],FUN = "*")
+          # Marginalk = Marginalk+dnormwishart(mu[j,1:D_c,2],mean2,1+sum(z[i,d[i,]==1]==j),omega[1:D_c,1:D_c,j,2],round(Cov2Prec(t2),5),nu+sum(z[i,d[i,]==1]==j),log=TRUE)          
+            }
+    }
+      else if (sum(z[i,]==j)==0){
+        #this part deals with the situation where there is no point in the cluster
+        Marginalk = Marginalk + ddirichlet(q[j,],gamma,log=TRUE)
+
+        Marginalk = Marginalk + dbeta(p[j], alpha0, beta0, log = TRUE)
+        
+        Marginalk = Marginalk + dbeta(s[j],1,1,log= TRUE)
+        
+        Marginalk = Marginalk+dnormwishart(mu[j,1:D_c,1],mu0[1,],1,omega[1:D_c,1:D_c,j,1],Cov2Prec(scov[1:D_c,1:D_c,1]),nu,log=TRUE)    
+        
+        Marginalk = Marginalk+dnormwishart(mu[j,1:D_c,2],mu0[2,],1,omega[1:D_c,1:D_c,j,2],Cov2Prec(scov[1:D_c,1:D_c,2]),nu,log=TRUE)
+      }
+      else if(sum(z[i,]==j)==1){
+        #this part deals with the situation where there is only one
+        
+        whichInk_1 = sum(x_ca[z[i,]==j]==1)
+        whichInk_2 = sum(x_ca[z[i,]==j]==2)
+        whichInk_3 = sum(x_ca[z[i,]==j]==3)
+        whichInk_4 = sum(x_ca[z[i,]==j]==4)
+        whichInk_5 = sum(x_ca[z[i,]==j]==5)
+        Marginalk = Marginalk + ddirichlet(q[j,],gamma+c(whichInk_1,whichInk_2,whichInk_3,whichInk_4,whichInk_5),log=TRUE)
+
+        whichInk_trained = sum(x_b[z[i,]==j])
+        whichInk_not = length(x_b[z[i,]==j])-whichInk_trained
+        Marginalk = Marginalk + dbeta(p[j], alpha0+whichInk_trained, beta0+whichInk_not, log = TRUE)
+
+        
+        whichInk_spike = sum(z[i,d[i,]==1]==j)
+        whichInk_slab = sum(z[i,]==j)-whichInk_spike
+        Marginalk = Marginalk + dbeta(s[j],alpha0+whichInk_spike,beta0+whichInk_slab,log=TRUE)
+        
+        if (whichInk_spike==1){
+          # sMean2 = c(mean(x_con[z[i,]==j & d[i,]==1,][1]),mean(x_con[z[i,]==j & d[i,]==1,][2]),mean(x_con[z[i,]==j & d[i,]==1,][3]))
+          # mean2 = (mu0[2,]+sum(z[i,d[i,]==1]==j)*sMean2)/(1+sum(z[i,d[i,]==1]==j))
+          # slist2 = lapply(1:whichInk_spike, function(t) outer(x_con[z[i,]==j & d[i,]==1,][t] - sMean2,x_con[z[i,]==j & d[i,]==1,][t] - sMean2,FUN = '*'))
+          # S2 = Reduce('+',slist2)
+          # t2 = scov[1:D_c,1:D_c,2]+S2+(sum(z[i,d[i,]==1]==j)/(1+sum(z[i,d[i,]==1]==j)))*outer(sMean2-mu0[2,],sMean2-mu0[2,],FUN = "*")
+          # Marginalk = Marginalk+dnormwishart(mu[j,1:D_c,2],mean2,1+sum(z[i,d[i,]==1]==j),omega[1:D_c,1:D_c,j,2],round(Cov2Prec(t2),5),nu,log=TRUE)
+    
+          Marginalk = Marginalk+dnormwishart(mu[j,1:D_c,1],mean1,1+sum(z[i,d[i,]==0]==j),omega[1:D_c,1:D_c,j,1],round(Cov2Prec(scov[1:D_c,1:D_c,1]),5),nu,log=TRUE)
+        }
+        else{
+          # Marginalk = Marginalk+dnormwishart(mu[j,1:D_c,2],mu0[2,],1+sum(z[i,d[i,]==1]==j),omega[1:D_c,1:D_c,j,2],round(Cov2Prec(scov[1:D_c,1:D_c,2]),5),nu+sum(z[i,d[i,]==1]==j),log=TRUE)
+          
+          sMean1 = c(mean(x_con[z[i,]==j & d[i,]==0,][1]),mean(x_con[z[i,]==j & d[i,]==0,][2]),mean(x_con[z[i,]==j & d[i,]==0,][3]))
+          mean1 = (mu0[1,]+sum(z[i,d[i,]==0]==j)*sMean1)/(1+sum(z[i,d[i,]==0]==j))
+          slist1 = lapply(1:whichInk_slab, function(t) outer(x_con[z[i,]==j & d[i,]==0,][t] - sMean1,x_con[z[i,]==j & d[i,]==0,][t] - sMean1,FUN = '*'))
+          S1 = Reduce('+',slist1)
+          t1 = scov[1:D_c,1:D_c,1]+S1+(sum(z[i,d[i,]==0]==j)/(1+sum(z[i,d[i,]==0]==j)))*outer(sMean1-mu0[1,],sMean1-mu0[1,],FUN = "*")
+          Marginalk = Marginalk+dnormwishart(mu[j,1:D_c,1],mean1,1+sum(z[i,d[i,]==0]==j),omega[1:D_c,1:D_c,j,1],round(Cov2Prec(t1),5),nu+sum(z[i,d[i,]==0]==j),log=TRUE)
+          
+        }
+                
+      }
+    }
+    whichink = sapply(1:C, function(t) sum(z[i,]==t))
+    Marginalk = Marginalk + ddirichlet(pi,alpha+whichink,log=TRUE)
+    Marginalk = exp(Marginalk)
+    MarginalIts = MarginalIts + Marginalk
+  }
+    return(log(mean(MarginalIts)))
+}
+
+
+
+chib = chib-estimation(cndatanewZ[,1:D_c],cndatanewZ[,D_c+1],cndatanewZ[,D_c+2],muH,oH,pH,qH,piH,sH,clusterDraw,dDraw,mu0,scov,1,1,gamma,rep(1,C),Its)
+chib
+
+
+
+```
+
+```{r}
+
+library(rjags)
+
+
+
+clusters.specification <-
+"model {
+    # N - observations
+    # D_c - continuous dimensions
+    # The D_c+2 column : binary(trained or not)
+    # C - clusters
+    
+    for (i in 1:N) {
+                                                    
+#      spy[i] = exp(loggam((k+D_c)/2))/((pi*k)^(D_c/2)*exp(loggam(k/2))*(1+1/D_c*t(x[i,D_c]-mu[c[i],1:D_c,d[i]+1]))%*%omega[1:D_c,1:D_c,c[i],d[i]+1]%*%(x[i,1:D_c]-mu[c[i],1:D_c,d[i]+1]))^((k+D_c)/2)*(exp(logdet(omega[1:D_c,1:D_c,c[i],d[i]+1])))^0.5
+
+
+
+      # ones[i] ~ dbern(spy[i]/B)
+      #x[i,1:D_c] ~ dmnorm(mu[c[i],1:D_c,d[i]+1], omega[1:D_c,1:D_c,c[i],d[i]+1]*S[c[i]])
+      
+
+
+      x[i,1:D_c] ~ dmnorm(mu[c[i],1:D_c,d[i]+1],omega[1:D_c,1:D_c,c[i],d[i]+1])
+      x[i,D_c+1] ~ dcat(q[c[i],1:5])
+      x[i,D_c+2] ~ dbern(p[c[i]])
+      d[i] ~ dbern(s[c[i]])
+      c[i] ~ dcat(prob[])
+    }
+
+      alpha ~ dgamma(a0, b0)
+
+
+      w[1] <- v[1]
+      for (j in 2 : k_max) {
+          w[j] <- v[j] * (1 - v[j-1]) * w[j-1]/v[j-1] 
+}
+      w.sum <- sum(w[])
+
+
+
+    for (j in 1:k_max) {
+       # tau[j]~ dgamma(k/2,k/2)
+        s[j] ~ dbeta(1,1)
+        omega[1:D_c,1:D_c,j,1] ~ dwish(scov[1:D_c,1:D_c,1], nu)
+        omega[1:D_c,1:D_c,j,2] = scov[1:D_c,1:D_c,2]
+        mu[j,1:D_c,1] ~ dmnorm(mu0[1,],omega[1:D_c,1:D_c,j,1])
+        mu[j,1:D_c,2]=mu0[2,]
+        p[j]~dbeta(alpha0,beta0)
+        q[j,1:5]~ddirch(gamma)
+        v[j] ~ dbeta(1, alpha)
+        prob[j] = w[j]/w.sum
+        
+    }
+
+
+}"
+
+
+
+
+jags <- jags.model(textConnection(clusters.specification),
+                   data = list('x' = cndatanewZ,
+                               'N' = N,
+                               'D_c' = D_c,
+                              'alpha0' = 1,
+                              'a0' = 0.1,
+                              'b0'=0.1,
+                               'beta0' = beta0,
+                               'gamma' = gamma,
+                               'scov'=scov,
+                               'mu0'=mu0,
+                               'k_max' = 30,
+                               'B' = B,
+                               'ones' = ones,
+                               'pi' = pi,
+                               'k' = k,
+                               'nu' = nu
+                              ),
+                   n.chains = 1,
+                   n.adapt = 5000)
+
+update(jags,n.iter=5000)
+samples = jags.samples(jags,variable.names = c('mu','omega','c','p','q','s','d'),n.iter=Its)
+Its = 5000
+clusterDraw<- matrix(samples$c, nrow =Its, byrow = TRUE) 
+hist(sapply(1:5000, function(x) length(unique(clusterDraw[x,]))), breaks=1:15)
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
